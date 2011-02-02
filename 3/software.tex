@@ -1,0 +1,74 @@
+\section{SOFTWARE} % (fold)
+\label{sec:software}
+This section discusses a number of issues and ways of improving the software layer of a kdb+ system and how this affects the entire database system.
+
+\subsection{Iterative Operations} % (fold)
+\label{sub:while_loops}
+As programmers and humans, it is common to break a task into smaller chunks and solve the problem for the smaller chunk.  This is the reasoning behind iterative operations (while loops) and recursion.  It is thus only natural for a programmer to design queries which act on individual rows of the database table (an iterative operation) rather than the table as a whole (a set-based operation).  This acts as a significant bottleneck as most databases - including kdb+ - are designed for set-based operations, or operations on large chunks of data.\newline
+
+For a given table:
+\[table: ([] 10000000?5);\]
+
+As an iterative operation:
+\[\textrm{table2:();}\]
+\[\textrm{index:0;}\]
+\[\textrm{while[index}<\textrm{count table;}\]
+\[\textrm{row: select from table where i=index;}\]
+\[\textrm{row: update a:a+1 from row;}\]
+\[\textrm{table2,:row;}\]
+\[\textrm{index+:1];}\]
+\[\textrm{table2}\]
+
+As a set operation:
+\[\textrm{update a:a+1 from table;}\]
+
+\begin{table}[ht]
+	\centering
+	\caption[Comparison of runtimes for iterative versus set-based operations]{Comparison of runtimes for iterative versus set-based operations}
+	\label{tab:while_loop_example}
+	\begin{tabular}{cc} 
+		\toprule
+		Iterative Operation & Set-Based Operation \\
+		(ms)				& (ms) \\ \toprule
+		3028.8				& 3.8 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+From the simple example above of a random table of one million integers, trying to increment to each integer takes significantly longer - roughly a thousand times longer - using a while loop.  This is due to the fact that it takes a very long time to retrieve an individual row and perform a task on each of them.  As a column-based database, kdb+ can do very fast operations on a whole column at the same time.  Although it is not natural to most programmers, it must become a habit to think of the table as a whole when planning operations.  Just making this change will speed up critical systems many times.  When looking through old code at work, it was a very common mistake to use while loops for operations instead of the faster set-based approach, simply because it was easier to write.  I was able to increase the speed by three hundred times by rethinking the current operations and rewriting them as set-based operations.
+% subsection while_loops (end)
+
+
+\subsection{Hidden Tables} % (fold)
+\label{sub:hidden_tables}
+One function in the Q language that is most commonly misused is hidden tables.  If a table or variable name is prefixed with a period, ``.'', then that table or variable is hidden.  The reason that many query programmers for kdb+ choose to utilize this is that they do not want their temporary tables visible to the public.  However, many programmers begin to get used to using these hidden tables and start to misuse them.  It is easy to forget that these tables are also persistent and when used in functions or as function parameters, the function no longer always behaves consistently.  This is due to the fact that the programmer assumes that function parameters are not persistent, which is always true except for the case of hidden tables.
+
+Take the following function as an example:
+\[.function:\{[x] .x+:1\}\]
+
+There are a number of problems, with the following usage of a hidden table ``.x''.  The programmer meant to have the function increment the parameter x, however since ``.x'' was used, they are in fact incrementing the hidden table instead.  This brings about many inconsistencies and possible issues that are incredibly hard to find and debug.  If the hidden table ``.x'' was not initialized at the time of calling the function, then an error would be returned.  Any other time, the function call would just be returning incorrect values.  Worst of all, the hidden table ``.x'' is incremented without the user knowing. The reason that kdb+ programmers choose to use the ``.x'' is because they do not realize the fact that all function parameters and variables created in a function are temporary regardless and by prefixing the period, have have not only made the table persistent, but undetectable to the public.  This leads to a major bottleneck where many hidden tables are initialized, take up more RAM and are undetectable - the equivalent of a memory leak.  This makes the system as a whole less stable and to the system administrators, gives the impression that the system is low on RAM and more needs to be purchased.  Thus the solution is to be clear on the actual usage of a hidden table and all function parameters should never be prefixed with a period.
+% subsection hidden_tables (end)
+
+\subsection{Splayed Tables} % (fold)
+\label{sub:splayed tables}
+Similar to other database systems, kdb+ stores its tables in separate files with each separate file representing a single table.  However, even though column-based databases are designed to minimize space usage there is a method implemented in the software that decreases the amount of storage space required when saving tables - a bottleneck discussed in the previous section [see Section \ref{sub:hard_drives}].  This method is called splaying the tables, where each column is saved into a separate file within a folder that represents the table.  The reason behind this is that splaying forces kdb+ to use enumerations.  Enumerations are a way of efficiently storing repetitive data.\newline
+
+A simple example of this would be four strings in an array: [``abc'',``abd'',``abc'',``abd''].  Normally this would be stored as is, and each string would take three bytes for a total of twelve bytes worth of storage.  In an enumeration, an array of distinct strings(``abc'' and ``abd'') is stored and an array of integers is stored to represent the position of the distinct strings.  So the enumeration would store the example as [``abc'',``abd''] and [0,1,0,1] for a total storage of $6+4=10$ bytes.  For the case of this example, the difference between using an enumeration and not using an enumeration is not great, however when you have a table of millions or billions of repeating elements and each column is a separate array to enumerate, this method of splaying tables in storage saves significant space.  This helps to reduce the frequency of adding new hard drives and increasing swap space, a bottleneck discussed in the previous section[\ref{sub:hard_drives}].\newline
+% subsection splayed_tables (end)
+
+\subsection{Load Balancing Gateways} % (fold)
+\label{sub:load_balancing}
+As the database system grows and more users begin to use the front-end software, the load on any given kdb+ session grows significantly.  Kdb+ itself has no built-in functionality to open a number of identical sessions and assign tasks to the session with the lowest usage.  Many companies work around this by creating a number of sessions and assigning users to specific sessions in hopes of splitting up the work.  This method however is not as effective, because there is no guarantee that all users in a specific group are not using the software at the same time and overloading a particular session.  Even though there is no built-in solution, it is not too difficult to write a script for a session that acts as a gateway to a number of different sessions.  This session will then be in charge of assessing which of its slave sessions are most free and sending the particular task to that session.  This way, all slave sessions are being accessed equally regardless of the number users and when the whole system is overloaded, a new slave session can be added transparently without requiring any changes in the underlying code. This functionality also has the advantage of easy implementation of distributed databases, where data is stored on many different servers in different locations.  Data distribution has many advantages as it combines the efficiency of local processing with the advantages provided by a centralized database system - namely one location to access all data\cite{Kroha}. This functionality effectively removes any bottlenecks or limitations regarding the number of users and is fully expandable the number of tables, databases and users increase.\newline
+
+By creating this session that acts as a gateway, many additional functions and analysis tools can also be added on in the future.  For example, it would be possible to log:
+\begin{enumerate}
+	\item[a)] the duration of tasks
+	\item[b)] which methods take the longest to return
+	\item[c)] which tasks cause errors
+	\item[d)] which users are most likely to overload the system
+	\item[e)] and how the system is being overloaded
+\end{enumerate}
+All this information can be used to assess where inefficiencies currently exists and how to remove these inefficiencies.\newline
+% subsection load_balancing (end)
+
+% section software (end)

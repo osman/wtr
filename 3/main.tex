@@ -1,0 +1,54 @@
+\documentclass[12pt, letterpaper, notitlepage]{article} 
+\usepackage[left=1.5in, top=1.0in, right=1.0in, bottom=1.0in]{geometry}
+\usepackage[bookmarks=true, bookmarksnumbered=true, linkbordercolor={1 1 1}, citebordercolor={1 1 1}, urlbordercolor={1 1 1}]{hyperref}
+\usepackage{setspace}
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs}
+\usepackage{latexsym}
+
+\begin{document}
+	%Front Matter
+	\begin{singlespace}
+		\pagenumbering{roman}
+		\include{title_page}
+		\include{letter_of_submittal}
+	\end{singlespace}
+
+	\begin{onehalfspace}
+		\setcounter{page}{3}
+		\include{contributions}
+		\include{summary}
+	\end{onehalfspace}
+	
+	\begin{singlespace}
+		\tableofcontents
+		\newpage
+		\listoffigures
+		\addcontentsline{toc}{section}{List of Figures}
+		\newpage
+		\listoftables
+		\addcontentsline{toc}{section}{List of Tables}
+		\newpage
+	\end{singlespace}
+	
+	%Report
+	\begin{onehalfspace}
+		\pagenumbering{arabic}
+		\include{introduction}
+		\include{hardware}
+		\include{software}
+		\include{benefits_analysis}
+		\include{conclusions}
+		\include{recommendations}	
+	\end{onehalfspace}
+	
+	%Back Matter
+	\begin{singlespace}
+		\include{glossary}
+		\bibliographystyle{IEEEtran}
+		\bibliography{./report-bib}
+		\addcontentsline{toc}{section}{References}
+	\end{singlespace}
+\end{document}

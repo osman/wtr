@@ -1,0 +1,14 @@
+\section{BENEFITS ANALYSIS} % (fold)
+\label{sec:benefits_analysis}
+
+\subsection{Efficiency} % (fold)
+\label{sub:efficiency}
+With the exception of hidden tables [see Section \ref{sub:hidden_tables}], all the discussed changes address a certain type of efficiency issue. These improvements work to reduce the amount of delays - or downtime - experienced by a user and maximize the lifespan of a given server.  The hardware issues discussed regarding RAM, swap space and hard drives along with the software issues discussed regarding iterative operations and load-balancing gateways all work to maximize the efficiency with which data is returned from the server.  The cumulation of these changes work to ensure that data is stored and retrieved in the quickest manner possible without overloading or overworking the server in question. Partitioning the databases and splaying the tables both work to reduce the amount of total hard drive space used.  This is of top priority since a vast amount of data is being streamed in daily so the growth of data being stored and the sheer amount of hard drive space required as time progresses grows immensely.  Any method of minimizing the amount of space used to store the data significantly increases the time span before new hard drives need to be added to the system.  As processors become more efficient and fast, one option that could be pursued is compression, where the data is stored on disk in a compressed state and decompressed on the fly when required.  That method bypasses the weakest link of the database system - hard drives - and fully utilizes RAM and the processors to speed up the retrieval and storage process.
+% subsection efficiency (end)
+
+\subsection{Resources Required} % (fold)
+\label{sub:resources_required}
+The resources required to implement each of the discussed improvements vary.  Many of the hardware bottlenecks require upgrades or new hardware, and little time to eliminate, while many of the software bottlenecks require significant work hours and are very cheap in terms of physical resources.  For example, swap space and RAM bottlenecks require new hard drives and new RAM.  Once these physical resources are purchased however, it is trivial for a technician to install these new components to the system.  On the other hand, a load-balancing gateway is all implemented in Q, which means that there are no new physical resources to purchase.  The load-balancing gateway, however, requires many hours of thought and support from humans, which is a continuous cost in terms of resources.  In the long run, many resources may be required to implement and maintain all the changes, however a five to ten year plan could be implemented such that all the bottlenecks could be removed within a certain time period or as they begin to significantly restrict the volume of production work completed.\\
+% subsection resources_required (end)
+
+% section benefits_analysis (end)
