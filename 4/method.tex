@@ -1,0 +1,189 @@
+\section{METHOD} % (fold)
+\label{sec:method}
+This section discusses the method of quantifying the sentiment level through a message and the code framework that facilitates the measurement and analysis of the results.
+
+\subsection{Framework} % (fold)
+\label{sub:framework}
+Hive uses a map/reduce architecture, where each distributed table is sent through a ``mapper'' on their local node and then the results from each node in the cluster are sent to a single node and aggregated through a ``reducer'' for the final result.  Each mapper or reducer can be written in an language with standard streams (stdin and stdout). Each row in the table is streamed into the mapper or reducer as a tab-separated line, manipulated, then streamed back out as a tab-separated line.\\
+
+For the purpose of this report, one hundred wall posts were randomly sampled from the Facebook database.  In the interest of protecting the privacy of the users, neither the senders nor receiver's user-ids are recorded.  The messages and actual sentiment - as assessed by human understanding of the message - are streamed through a mapper that will output the actual sentiment, calculated sentiment and the average runtime of one thousand tries. The method detailed in this report uses constant positive and negative sentiment words.  These words are determined interactively through reading many messages and extracting words that indicate positive sentiments (joy, happiness, love) and negative sentiments (pain, sadness or hate) and storing them as constants. The sentiment words used in this application can be found in Appendix \ref{app:sentiment_words}.\\
+
+The framework of the process described above can be found in the following code listings: \emph{constants.py}, \emph{utils.py} and \emph{mapper.py}. The \emph{constants.py} and \emph{utils.py} files are helper files that the mapper (in the \emph{mapper.py} file) will use to quantify the sentiment.  The \emph{utils.py} file holds all three iterations and any helper methods those iterations require.  The mapper will import the specific iteration required via a specific function name and alias it as the function \emph{classify}. Thus the method in the \emph{mapper.py} file is constant and only the specific function being called for quantification changes.  This allows for the runtime analysis to by accurate as only the quantification process is included.
+
+	\newpage
+	\begin{lstlisting}[caption={\textit{constants.py}: sentiment constants}, label=lst:constants]
+(pos,neutral,neg) = range(1,4)
+
+NEGATION_WORDS = set(
+                        [   
+                            "isn't", "isnt",
+                            "wasn't", "wasnt",
+                            "aren't", "arent",
+                            "won't", "wont",
+                            "can't", "cant",
+                            "don't", "dont",
+                            "no", "not"
+                        ]   
+                    )   
+
+TOPTERMS_REGEX = '[A-Za-z0-9&\']+'
+	\end{lstlisting}
+	
+	\begin{lstlisting}[caption={\textit{utils.py}: helper functions for the mapper}]
+from re import findall
+from constants import *
+from sentiment_words import words
+
+#Flip a sentiment score (as result of a negation)
+def flip(s):
+    return neg if s==pos else pos if s==neg else neutral
+
+#Get the number of negations for a given word in a set of tokens
+def num_negd(i, tokens):
+    return len(set(tokens[(0 if i-3<0 else i-3):i]) & NEGATION_WORDS)
+
+#Get a string representation of the sentiment
+#if there or negation words, then flip the sentiment
+def check_negd(word, num_neg):
+    return str(flip(words[word]) if num_neg>0 else words[word])
+
+#Get a string representation of the sentiment
+#if there or negation words, then flip the sentiment only if there
+#is an odd number of negations
+def check_double_negd(word, num_neg):
+    return str(flip(words[word]) if num_neg%2 else words[word])
+	\end{lstlisting}
+	
+	\newpage
+	\begin{lstlisting}[caption={\textit{mapper.py}: the mapper}]
+from sys import stdin
+from time import time
+
+from constants import pos,neg
+from utils import replace_with_appropriate_method as classify
+
+for line in stdin:
+    (message, actual) = line.rstrip('\n').split('\t')
+
+    #Run the same classification ten times to obtain an average runtime
+    for i in xrange(10):
+        start = time()
+        classification = classify(message)
+        end = time()
+        times.append(end-start)
+    
+    #Classify the message with a sentiment
+    pos_count = classification[pos]
+    neg_count = classification[neg]
+    avg_runtime = str(sum(times)/10.0)
+
+    #Return a sentiment result for the message text
+    result = [index, actual, avg_runtime]
+    if   pos_count<neg_count:   result.insert(2,'negative') 
+    elif pos_count>neg_count:   result.insert(2,'positive') 
+    else:                       result.insert(2,'neutral') 
+    print '\t'.join(result)
+	\end{lstlisting}
+% subsection framework (end)
+
+\newpage
+\subsection{Iteration 1: Naive Classify} % (fold)
+\label{sub:iteration_1_naive_classify}
+The first iteration consists of the simplest method of determining a sentiment from a message.  This is to count the number of positive and negative sentiment words present. The number of positive and negative words are found within the message and if the number of positive sentiments outweigh the negative sentiments, then the overall sentiment of the message is positive. Should the number of negative sentiments outweigh the positive sentiments, then the overall sentiment is negative. If neither are prevalent, then the overall sentiment is neutral.  This method has the benefit of speed as the sentence structure and context of the words used are not considered.\\
+
+	\begin{lstlisting}[caption={\textit{utils.py}: code fragment for naive classify}]
+def naive_classify(text):
+    sent_tokens = findall(TOPTERMS_REGEX, text)
+    sentiment   = list(set(sent_tokens) & set(words.keys()))
+    sentiment   = [check_negd(w,0) for w in sentiment]
+
+    #Count the number of positive and negative sentiments
+    sentiment   = ' '.join(sentiment)
+    return {neg:sentiment.count(str(neg)), pos:sentiment.count(str(pos))}
+	\end{lstlisting}
+	
+	\begin{table}[htp]
+		\centering
+		\caption{Iteration 1 - Aggregate Results$^1$}
+		\begin{tabular}{cccc}
+			\toprule
+Total Samples	& Correct Samples	& Number Recalled   & Average Runtime\\
+				&					&                   & (ms)\\
+			\toprule
+100             & 56                & 68                & 0.14874 \\
+			\bottomrule
+		\end{tabular}
+		\label{tab:iter_1_aggregate_results}
+	\end{table}
+\footnotetext[1]{The aggregate results are listed above, for the individualized results see Appendix \ref{app:all_results}}
+% subsection iteration_1_naive_classify (end)
+
+\newpage
+\subsection{Iteration 2: Naive Classify with Negation} % (fold)
+\label{sub:iteration_2_naive_classify_with_negation}
+    The second iteration accounts for negation words [see Listing \ref{lst:constants}] such as ``not'' or ``isn't'' before a sentiment word.  Thus the three words before each sentiment word are analyzed to see if it is a negation word.  If such a negation word is found, then the sentiment of the keyword found is then flipped to represent the opposite sentiment.  The expected improvement in this change is to increase the accuracy. However, the recall is expected to remain the same as the same search words are used as the first iteration.\\
+    
+	\begin{lstlisting}[caption={\textit{utils.py}: code fragment for naive classify with negation}]
+def naive_negd_classify(text):
+    sent_tokens = findall(TOPTERMS_REGEX, text)
+    sentiment   = list(set(sent_tokens) & set(words.keys()))
+    sentiment   = [(w, sent_tokens.index(w)) for w in sentiment]
+    sentiment   = [check_negd(w, num_negd(i, sent_tokens))
+                      for (w,i) in sentiment]
+
+    #Count the number of positive and negative sentiments
+    sentiment   = ' '.join(sentiment)
+    return {neg:sentiment.count(str(neg)), pos:sentiment.count(str(pos))}
+	\end{lstlisting}
+	
+	\begin{table}[htp]
+		\centering
+		\caption{Iteration 2 - Aggregate Results$^2$}
+		\begin{tabular}{cccc}
+			\toprule
+Total Samples	& Correct Samples	& Number Recalled   & Average Runtime\\
+				&					&                   & (ms)\\
+			\toprule
+100             & 57                & 69                & 0.15344 \\
+			\bottomrule
+		\end{tabular}
+		\label{tab:iter_2_aggregate_results}
+	\end{table}
+\footnotetext[2]{The aggregate results are listed above, for the individualized results see Appendix \ref{app:all_results}}
+% subsection iteration_3_naive_classify_with_negation (end)
+
+\newpage
+\subsection{Iteration 3: Naive Classify with Double Negation} % (fold)
+\label{sub:iteration_3_naive_classify_with_double_negation}
+    The third iteration accounts for cases where improper use of grammar results in double negatives like ``isn't not'' or ``not not''.  In these cases, the sentiment should not be flipped as the user intended for the sentiment to be the same as the sentiment keyword. This is accomplished by checking if the number of negation words present in the three words prior to the sentiment keyword are even or odd.  Thus, an odd number of negations results in a flip in sentiment while an even number of negation words result in no negation.\\
+     
+	\begin{lstlisting}[caption={\textit{utils.py}: code fragment for naive classify with double negation}]
+def naive_double_negd_classify(text):
+    sent_tokens = findall(TOPTERMS_REGEX, text)
+    sentiment   = list(set(sent_tokens) & set(words.keys()))
+    sentiment   = [(w, sent_tokens.index(w)) for w in sentiment]
+    sentiment   = [check_double_negd(w, num_negd(i, sent_tokens))
+                      for (w,i) in sentiment]
+
+    #Count the number of positive and negative sentiments
+    sentiment   = ' '.join(sentiment)
+    return {neg:sentiment.count(str(neg)), pos:sentiment.count(str(pos))}
+	\end{lstlisting}
+
+	\begin{table}[htp]
+		\centering
+		\caption{Iteration 3 - Aggregate Results$^3$}
+		\begin{tabular}{cccc}
+			\toprule
+Total Samples	& Correct Samples	& Number Recalled   & Average Runtime\\
+				&					&                   & (ms)\\
+			\toprule
+100             & 58                & 69                & 0.15381 \\
+			\bottomrule
+		\end{tabular}
+		\label{tab:iter_3_aggregate_results}
+	\end{table}
+\footnotetext[3]{The aggregate results are listed above, for the individualized results see Appendix \ref{app:all_results}}
+% subsection iteration_3_naive_classify_with_double_negation (end)
+
+% section method (end)

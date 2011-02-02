@@ -1,0 +1,74 @@
+\documentclass[12pt, letterpaper, notitlepage]{article} 
+\usepackage[left=1.5in, top=1.0in, right=1.0in, bottom=1.0in]{geometry}
+\usepackage[bookmarks=true, bookmarksnumbered=true, linkbordercolor={1 1 1}, citebordercolor={1 1 1}, urlbordercolor={1 1 1}]{hyperref}
+\usepackage{setspace}
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs}
+\usepackage{latexsym}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{longtable}
+
+\definecolor{gray}{rgb}{0.95,0.95,0.95} 
+
+\renewcommand{\lstlistlistingname}{List of Listings}
+\lstset{language=Python, basicstyle=\footnotesize, frame=lines, backgroundcolor=\color{gray}, rulesepcolor=\color{gray}, showstringspaces=false}
+
+\floatstyle{ruled}
+\newfloat{code}{thp}{loc}
+\floatname{code}{Listing}
+
+\begin{document}
+	%Front Matter
+	\begin{singlespace}
+		\pagenumbering{roman}
+		\include{title_page}
+		\include{letter_of_submittal}
+	\end{singlespace}
+
+	\begin{onehalfspace}
+		\setcounter{page}{3}
+		\include{contributions}
+		\include{summary}
+	\end{onehalfspace}
+	
+	\begin{singlespace}
+		\tableofcontents
+		\newpage
+		\lstlistoflistings
+		\addcontentsline{toc}{section}{List of Listings}
+		\newpage
+		\listoftables
+		\addcontentsline{toc}{section}{List of Tables}
+		\newpage
+	\end{singlespace}
+	
+	%Report
+	\begin{onehalfspace}
+		\pagenumbering{arabic}
+		\include{introduction}
+		\include{method}
+		\include{analysis}
+		\include{conclusions}
+		\include{recommendations}	
+	\end{onehalfspace}
+	
+	%Back Matter
+	\begin{onehalfspace}
+		\let\cleardoublepage\clearpage
+		\appendix
+		\include{appendix_a}
+		\include{appendix_b}
+		\include{appendix_c}
+	\end{onehalfspace}
+	
+	\begin{singlespace}
+		\include{glossary}
+		\bibliographystyle{IEEEtran}
+		\bibliography{./report-bib}
+		\addcontentsline{toc}{section}{References}
+	\end{singlespace}
+\end{document}

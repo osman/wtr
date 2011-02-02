@@ -1,0 +1,36 @@
+\section{INTRODUCTION} % (fold)
+\label{sec:introduction}
+	The purpose of this report is to discuss a number of iterations of a method of quantifying user sentiment and analyzing the effectiveness of the solution.
+	
+	\subsection{Background} % (fold)
+	\label{sub:background}
+Facebook is a relatively new product - released in 2005 by Facebook, Inc. - 
+with a rapidly growing user base exceeding 200 million active users.  With a mission statement of ``give[ing] people the power to share and make the world more open and connected,'' \cite{facebook_mission} the Facebook product is a social networking website allowing connections and communication between friends on a new massive scale.  Main features include the sharing of and commenting on photos, videos, notes, links and wall posts. To deal with storing this massive influx of information, Facebook developed Hive - a data warehouse infrastructure - built on top of Apache Hadoop - a distributed file system. Hive provides tools to enable easy data summarization, adhoc querying and analysis of large datasets data stored in Hadoop files. \cite{hive_about}\\
+
+With each interaction stored in the Hive database, this presents the company with a number of interesting problems and applications to make the data useful.  The data can be used to quantify a number of numerical metrics such as:
+\begin{itemize}
+	\item site health (active user growth, departing users, inactive users, etc...)
+	\item user health (sentiment, user posts, user interactions, etc..)
+\end{itemize}
+
+and predictive metrics such as:
+\begin{itemize}
+	\item health (predicting the next area affected by a given virus through messages)
+	\item brands (projecting future brand awareness, effects of advertising)
+	\item new internet memes
+\end{itemize}
+
+In particular, the metric of user sentiment presents several use cases.  For example, brands utilizing the site could find out how users feel about their products or services without creating a survey, poll or directly asking their customers. Facebook itself, can assess how different changes affect the sentiment level of users or if sentiment level drops very quickly over a few minutes, there could be a minor problem with the site which could be fixed right away before more people complain.  This level of understanding of the target audience allows for both Facebook and their customers to reveal, acknowledge and address issues at a much faster pace without directly asking the users - a very powerful tool. Even with all the powerful uses, this is still a particularly difficult problem to solve. In the English language, where a word is placed and how it is used has a heavy influence on whether the user intended to convey a positive emotion or a negative sentiment. \cite{dahlgreen} As such, the solution to this problem requires a through understanding of linguistics and context.  In addition, the solution must be scalable and utilize minimal resources as the sheer volume of messages being sent back and forth is rapidly growing daily.  Lastly, the site is a highly multilingual product, which means that the solution must also be scalable in the sense of added grammars of different languages to suit the product as it grows.
+	% subsection background (end)
+
+	\subsection{Scope} % (fold)
+	\label{sub:scope}
+This report discusses a number of iterations of a single method of quantifying user sentiment and analyzes the effectiveness of the solution through three metrics - accuracy, precision and runtime. While there are many languages and different methods of quantification, this report will only consider the English language and three iterations of a simple solution.  For the purpose of this report, ``the solution'' refers to all three iterations of the simple method of quantifying user sentiment (detailed later in the report).  The map/reduce architecture of Hadoop and Hive facilitate development of mappers and reducers in any programming language that implements standard streams (C, C++, Java, Python, PHP, etc..).  For the sake of readability and simplicity, all mappers and reducers in this report will be written in Python.  As such, the audience is required to be comfortable with Python; the usage and syntax of Python will not be discussed further in this report.
+	% subsection scope (end)
+
+	\subsection{Outline} % (fold)
+	\label{sub:outline}
+There are two sections in this report that describes each iteration of the quantification method and an analysis of the results. Lastly, there will be a discussion of possible improvements to the solution and a brief description of a more complex method. Throughout the report, a variety of terms are used so a glossary of terms has been included for reference.  The first section will detail three iterations of the solution and a summary of the results for each iteration. The second section will analyze the results of each iteration and compare them using three metrics: recall, accuracy and runtime.  Each iteration will then be attributed to specific use cases based on the analysis of the results. Finally, methods of improving the solution will be discussed.
+	% subsection outline (end)
+
+% section introduction (end)
